@@ -6,6 +6,7 @@
 # include "ray.h"
 # include "scene.h"
 # include "sphere.h"
+# include "sphere-texture.h"
 
 void write_image(
     std::vector<std::vector<r3_vec>> pixels,
@@ -31,9 +32,12 @@ void write_image(
 int main() {
     scene s = scene();
 
-    sphere ground = sphere(r3_vec(0, -1e8 - 200, 0), 1e8, false);
-    sphere o = sphere(r3_vec(-350, 100, 500), 300, false);
-    sphere p = sphere(r3_vec(350, 100, 500), 300, true);
+    texture* matte = new matte_texture(r3_vec(0, 0, 0));
+    texture* shiny = new mirror_texture(0.85);
+
+    sphere ground = sphere(r3_vec(0, -1e8 - 200, 0), 1e8, matte);
+    sphere o = sphere(r3_vec(-350, 100, 500), 300, matte);
+    sphere p = sphere(r3_vec(350, 100, 500), 300, shiny);
 
     s.add_object(&ground);
     s.add_object(&o);
@@ -41,13 +45,18 @@ int main() {
 
     srand(time(NULL));
 
-    for (int i = 0; i < 10; i++) {
-        double distance = rand() % 1000;
-        double horizontal = rand() % 2000;
+    std::vector<r3_vec> small_balls = {
+        r3_vec(-65, -150, 500),
+        r3_vec(300, -150, 10),
+        r3_vec(180, -150, 0),
+        r3_vec(-850, -150, 1000),
+    };
+
+    for (int i = 0; i < small_balls.size(); i++) {
         sphere* p = new sphere(
-            r3_vec(horizontal - 1000, -150, distance),
+            small_balls[i],
             50,
-            false
+            shiny // shiny
         );
         s.add_object(p);
     }
@@ -55,10 +64,13 @@ int main() {
     r3_vec light = r3_vec(5000, 10000, -5000);
     s.add_light(&light);
 
+    sphere fake_lamp = sphere(r3_vec(7000, 12000, -7000), 1000, matte);
+    s.add_object(&fake_lamp);
+
     write_image(s.render(
             r3_vec(0, 0, -800), // camera
             1000, // width and height
             1000,
-            10 // samples
+            20 // samples
     ), "out.ppm");
 }

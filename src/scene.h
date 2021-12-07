@@ -84,12 +84,18 @@ class scene {
                 std::vector<r3_vec> row = {};
                 for (int j = 0; j < width; j += 1) {
                     double brightness = 0;
-                    ray c = ray(
-                        camera_position,
-                        r3_vec(j - width / 2, i - height / 2, 0) - camera_position
-                    );
-
                     for (int k = 0; k < samples; k++) {
+                        r3_vec direction = r3_vec(
+                            j - width / 2,
+                            i - height / 2,
+                            0
+                        ) - camera_position;
+                        ray c = ray(
+                            camera_position,
+                            r3_vec::normalized(direction) +
+                            r3_vec::random() * 0.0005
+                        );
+
                         brightness += trace(c, 5);
                     }
 

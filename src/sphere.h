@@ -3,14 +3,15 @@
 # include "ray.h"
 # include "r3_vec.h"
 # include "object.h"
+# include "texture.h"
 
 class sphere : public object {
     public:
         sphere();
-        sphere(r3_vec center, double radius, bool smooth):
+        sphere(r3_vec center, double radius, texture* texture):
             center(center),
             radius(radius),
-            smooth(smooth)
+            sphere_texture(texture)
         {}
 
         virtual double intersect(const ray& rt) {
@@ -39,30 +40,15 @@ class sphere : public object {
             const r3_vec& pos,
             const r3_vec& in
         ) const {
-            r3_vec norm = normal(pos);
-            r3_vec reflect = in - 2 * (in* norm) * norm;
-
-            if (smooth) return {reflect};
-
-            std::vector<r3_vec> result;
-            for (int i = 0; i < 1; i++) { // only do one for now
-                double theta = rand() / (double)RAND_MAX * 2 * M_PI;
-                result.push_back(reflect + r3_vec(
-                    cos(theta) * 0.5,
-                    sin(theta) * 0.5,
-                    0
-                ));
-            }
-            return result;
+            return sphere_texture->reflection(normal(pos), pos, in);
         }
 
         virtual double brightness(double source, double reflection) const {
-            if (smooth) return 0.05 * source + 0.95 * reflection;
-            return 0.95 * source + 0.05 * reflection;
+            return sphere_texture->brightness(source, reflection);
         }
 
     public:
         r3_vec center;
         double radius;
-        bool smooth;
+        texture* sphere_texture;
 };

@@ -6,6 +6,8 @@
 
 class r3_vec;
 double operator*(const r3_vec&, const r3_vec&);
+r3_vec operator*(const r3_vec&, double);
+r3_vec operator*(double, const r3_vec&);
 r3_vec operator/(const r3_vec&, double);
 
 class r3_vec {
@@ -55,10 +57,10 @@ class r3_vec {
 
         static r3_vec random() {
             return r3_vec(
-                (double) rand() / RAND_MAX,
-                (double) rand() / RAND_MAX,
-                (double) rand() / RAND_MAX
-            );
+                (double) rand() / RAND_MAX - 0.5,
+                (double) rand() / RAND_MAX - 0.5,
+                (double) rand() / RAND_MAX - 0.5
+            ) * 2;
         }
 
     public:
