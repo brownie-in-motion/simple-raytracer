@@ -1,6 +1,7 @@
 # include <vector>
 
 # include "ray.h"
+# include "light.h"
 # include "object.h"
 
 class scene {
@@ -11,12 +12,12 @@ class scene {
             objects.push_back(o);
         }
 
-        void add_light(r3_vec* v) {
+        void add_light(light* v) {
             lights.push_back(v);
         }
 
-        double trace(ray& r, int depth) const {
-            if (depth <= 0) return 0;
+        r3_vec trace(ray& r, int depth) const {
+            if (depth <= 0) return r3_vec(0, 0, 0);
 
             double min_t = 1e9;
             object* min_obj = NULL;
@@ -28,17 +29,22 @@ class scene {
                 }
             }
 
-            if (min_obj == NULL) return 0;
+            if (min_obj == NULL) return r3_vec(0, 0, 0);
 
             r3_vec position = r.at(min_t);
 
-            double brightness = 0;
+            r3_vec brightness = r3_vec(0, 0, 0);
 
-            for (r3_vec* l : lights) {
-                r3_vec direction = *l - position;
+            for (light* l : lights) {
+                r3_vec light_position = l->position;
+                r3_vec light_color = l->color;
+                r3_vec direction = light_position - position;
+
                 bool in_shadow = false;
                 for (object* o : objects) {
+                    if (o->is_transparent()) continue;
                     r3_vec norm = o->normal(position);
+
                     ray shadow_ray(position + 1e-6 * norm, direction);
 
                     double t = o->intersect(shadow_ray);
@@ -49,28 +55,41 @@ class scene {
                 }
 
                 if (!in_shadow) {
-                    // TODO: handle diffusion in object
-                    brightness += fabs(
+                    double value = fabs(
                         min_obj->normal(position) *
                         r3_vec::normalized(direction)
                     );
+                    brightness += value * light_color;
                 }
             }
 
-            double reflect_brightness = 0;
+            r3_vec reflect_brightness = r3_vec(0, 0, 0);
             std::vector<r3_vec> reflected = min_obj->reflection(
                 position,
                 r.direction
             );
+
             r3_vec norm = min_obj->normal(position);
             for (r3_vec v : reflected) {
                 ray reflect_ray(position + 1e-6 * norm, v);
                 reflect_brightness += trace(reflect_ray, depth - 1);
             }
 
-            return min_obj->brightness(
+            r3_vec refract_brightness = r3_vec(0, 0, 0);
+            std::vector<r3_vec> refracted = min_obj->refraction(
+                position,
+                r.direction
+            );
+            for (r3_vec v : refracted) {
+                ray refract_ray(position - 1e-6 * norm, v);
+                refract_brightness += trace(refract_ray, depth - 1);
+            }
+
+            return min_obj->color_mix(
+                position,
                 brightness,
-                reflect_brightness / reflected.size()
+                reflect_brightness / reflected.size(),
+                refract_brightness / refracted.size()
             );
         }
 
@@ -83,7 +102,7 @@ class scene {
                 fflush(stdout);
                 std::vector<r3_vec> row = {};
                 for (int j = 0; j < width; j += 1) {
-                    double brightness = 0;
+                    r3_vec color = r3_vec(0, 0, 0);
                     for (int k = 0; k < samples; k++) {
                         r3_vec direction = r3_vec(
                             j - width / 2,
@@ -96,21 +115,19 @@ class scene {
                             r3_vec::random() * 0.0005
                         );
 
-                        brightness += trace(c, 5);
+                        color += trace(c, 10);
                     }
 
-                    double mean = brightness / samples;
-                    int color = 255 * mean;
                     row.push_back(
-                        r3_vec(color, color, color)
+                        color / samples
                     );
                 }
                 image.push_back(row);
-            };
+            }
             return image;
         }
 
     public:
         std::vector<object*> objects;
-        std::vector<r3_vec*> lights;
+        std::vector<light*> lights;
 };

@@ -11,7 +11,15 @@ class sphere : public object {
         sphere(r3_vec center, double radius, texture* texture):
             center(center),
             radius(radius),
-            sphere_texture(texture)
+            sphere_texture(texture),
+            invert(false)
+        {}
+
+        sphere(r3_vec center, double radius, texture* texture, bool invert):
+            center(center),
+            radius(radius),
+            sphere_texture(texture),
+            invert(true)
         {}
 
         virtual double intersect(const ray& rt) {
@@ -33,7 +41,7 @@ class sphere : public object {
         }
 
         virtual r3_vec normal(const r3_vec& point) const {
-            return r3_vec::normalized(point - center);
+            return r3_vec::normalized(point - center) * (invert ? -1 : 1);
         }
 
         virtual std::vector<r3_vec> reflection(
@@ -43,12 +51,34 @@ class sphere : public object {
             return sphere_texture->reflection(normal(pos), pos, in);
         }
 
-        virtual double brightness(double source, double reflection) const {
-            return sphere_texture->brightness(source, reflection);
+        virtual std::vector<r3_vec> refraction(
+            const r3_vec& pos,
+            const r3_vec& in
+        ) const {
+            return sphere_texture->refraction(normal(pos), pos, in);
+        }
+
+        virtual bool is_transparent() const {
+            return sphere_texture->is_transparent();
+        }
+
+        virtual r3_vec color_mix(
+            r3_vec position,
+            r3_vec source,
+            r3_vec reflection,
+            r3_vec refraction
+        ) const {
+            return sphere_texture->color_mix(
+                position,
+                source,
+                reflection,
+                refraction
+            );
         }
 
     public:
         r3_vec center;
         double radius;
         texture* sphere_texture;
+        bool invert;
 };
